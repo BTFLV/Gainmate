@@ -1,8 +1,9 @@
 name: Quality
 on:
   pull_request:
-  push:
-    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_call:
 permissions:
   contents: read
@@ -35,7 +36,9 @@ jobs:
       - run: npm run check
       - run: npm run format:check
       - run: npm test
-      - run: npm run build
+      # Release packaging builds the frontend; PRs validate it here.
+      - if: github.event_name == 'pull_request'
+        run: npm run build
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked -- --test-threads=2

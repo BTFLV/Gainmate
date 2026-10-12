@@ -8,6 +8,8 @@ function setup({
   uploadFails = false,
   promoteFails = false,
   head = 'new',
+  changedFiles = [{ filename: 'src/App.tsx' }],
+  comparisonStatus = 'ahead',
 } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'gainmate-release-'));
   dirs.push(folder);
@@ -34,6 +36,9 @@ function setup({
         deleteRef: vi.fn(async () => {}),
       },
       repos: {
+        compareCommitsWithBasehead: vi.fn(async () => ({
+          data: { status: comparisonStatus, files: changedFiles },
+        })),
         createRelease: vi.fn(async () => ({ data: { id: 20 } })),
         uploadReleaseAsset: vi.fn(async () => {
           order.push(['upload']);
@@ -110,6 +115,51 @@ describe('rolling release promotion', () => {
   });
   it('does not publish an outdated main build', async () => {
     const s = setup({ head: 'newer' });
+    await publish(s);
+    expect(s.github.rest.repos.createRelease).not.toHaveBeenCalled();
+  });
+  it('publishes the built commit when only documentation changed afterwards', async () => {
+    const s = setup({
+      head: 'newer',
+      changedFiles: [
+        { filename: 'README.md' },
+        { filename: 'docs/screenshots/collection.png' },
+      ],
+    });
+    await publish(s);
+    expect(s.github.rest.repos.createRelease).toHaveBeenCalledWith(
+      expect.objectContaining({ target_commitish: 'new' }),
+    );
+    expect(s.github.rest.git.updateRef).toHaveBeenCalledWith(
+      expect.objectContaining({ ref: 'tags/latest', sha: 'new' }),
+    );
+  });
+  it('rejects code renamed into the documentation directory', async () => {
+    const s = setup({
+      head: 'newer',
+      changedFiles: [
+        { filename: 'docs/old-code.txt', previous_filename: 'src/App.tsx' },
+      ],
+    });
+    await publish(s);
+    expect(s.github.rest.repos.createRelease).not.toHaveBeenCalled();
+  });
+  it('rejects divergent history even when the returned files are documentation', async () => {
+    const s = setup({
+      head: 'newer',
+      comparisonStatus: 'diverged',
+      changedFiles: [{ filename: 'README.md' }],
+    });
+    await publish(s);
+    expect(s.github.rest.repos.createRelease).not.toHaveBeenCalled();
+  });
+  it('rejects a potentially truncated file comparison', async () => {
+    const s = setup({
+      head: 'newer',
+      changedFiles: Array.from({ length: 300 }, (_, i) => ({
+        filename: `docs/${i}.md`,
+      })),
+    });
     await publish(s);
     expect(s.github.rest.repos.createRelease).not.toHaveBeenCalled();
   });

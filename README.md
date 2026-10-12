@@ -128,7 +128,7 @@ See [contributing](CONTRIBUTING.md), [audio internals](docs/AUDIO.md) and [relea
 
 ## CI, releases and signing
 
-PRs and `main` pushes run quality checks. A successful `main` release run builds both macOS architectures and a Windows NSIS installer, then stages a complete artifact set before promoting the normal release **Latest GainMate Release** at mutable tag `latest`. The app's semantic version remains independent of that tag.
+Code-changing PRs run quality checks. Code/build-input pushes to `main` run them once inside the release workflow. Markdown and `docs/` changes alone do not trigger builds. A successful `main` release run builds both macOS architectures and a Windows NSIS installer, then stages a complete artifact set before promoting the normal release **Latest GainMate Release** at mutable tag `latest`. The app's semantic version remains independent of that tag.
 
 ## License
 

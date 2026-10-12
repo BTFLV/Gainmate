@@ -10,10 +10,34 @@ export async function publish({
     sha = context.sha;
   const main = await github.rest.git.getRef({ ...repo, ref: 'heads/main' });
   if (main.data.object.sha !== sha) {
+    const { data } = await github.rest.repos.compareCommitsWithBasehead({
+      ...repo,
+      basehead: `${sha}...${main.data.object.sha}`,
+      per_page: 1,
+    });
+    // Keep this exclusion in sync with both workflow path filters. Renames
+    // must inspect the old path too: moving code into docs removes build input.
+    const documentation = (path) =>
+      path.startsWith('docs/') || path.endsWith('.md');
+    // GitHub returns at most 300 changed files. Fail closed at that limit.
+    if (
+      data.status !== 'ahead' ||
+      !Array.isArray(data.files) ||
+      data.files.length >= 300 ||
+      data.files.some(
+        (file) =>
+          !documentation(file.filename) ||
+          (file.previous_filename && !documentation(file.previous_filename)),
+      )
+    ) {
+      core.notice(
+        'Newer build inputs or an unverifiable main history exist; skipping this older release.',
+      );
+      return;
+    }
     core.notice(
-      'A newer main commit exists; this older build will not replace latest.',
+      'Only documentation changed since this build; publishing its original commit.',
     );
-    return;
   }
   const folder = artifactDirectory,
     files = readdirSync(folder);

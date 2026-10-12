@@ -2,6 +2,9 @@ name: Release
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
 permissions:
   contents: read
@@ -82,7 +85,9 @@ jobs:
             echo "GAINMATE_FFMPEG=$base/src-tauri/binaries/ffmpeg-${{ matrix.target }}$suffix"
             echo "GAINMATE_FFPROBE=$base/src-tauri/binaries/ffprobe-${{ matrix.target }}$suffix"
           } >> "$GITHUB_ENV"
-      - run: cargo test -p gainmate-core --locked -- --test-threads=2
+      # Apple Silicon audio tests already passed in the required Quality job.
+      - if: matrix.target != 'aarch64-apple-darwin'
+        run: cargo test -p gainmate-core --locked -- --test-threads=2
       - name: Configure optional Apple signing and notarization
         if: runner.os == 'macOS'
         shell: bash

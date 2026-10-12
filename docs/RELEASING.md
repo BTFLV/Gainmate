@@ -2,9 +2,13 @@
 
 ## What runs
 
-`Quality` runs on PRs and pushes to `main`: TypeScript, ESLint, Prettier, Vitest, browser smoke tests, production frontend build, Rust formatting, Clippy and Rust integration tests. Audio tests run against the exact bundled FFmpeg build, not a runner's system installation.
+`Quality` runs on code-changing PRs and is called once by `Release` on `main`: TypeScript, ESLint, Prettier, Vitest, browser smoke tests, production frontend build, Rust formatting, Clippy and Rust integration tests. Audio tests run against the exact bundled FFmpeg build, not a runner's system installation.
 
-`Release` runs on pushes to `main` or manual dispatch. It first calls the same quality workflow, then builds and runs audio tests on:
+`Release` runs on code/build-input pushes to `main` or manual dispatch. Both automatic triggers ignore `docs/**` and `**/*.md`; README, Markdown and documentation screenshots alone do not start builds. Source, application assets, dependencies, configuration, scripts and workflow changes still trigger builds. Manual dispatch remains available for an intentional rebuild.
+
+There is no separate Quality push trigger. Release calls Quality once, then builds the installers below. Apple Silicon audio tests already ran in Quality; only Intel and Windows repeat them for their native platform. The standalone frontend production build runs only on PRs, since release packaging builds it for each installer.
+
+Platforms:
 
 | Runner           | Rust target              | Installer             |
 | ---------------- | ------------------------ | --------------------- |
@@ -24,7 +28,7 @@ All build jobs must succeed before publication. Each workflow run uploads unique
 
 GitHub has no transaction spanning release and Git-ref updates. There can be a short availability gap during promotion; there is no intentional state with a mixed old/new public artifact set. An abruptly terminated runner/API outage during promotion may require an administrator to republish the retained previous draft. Drafts named `gainmate-previous-*` retain the old assets until successful promotion. Do not delete recovery drafts before checking the normal latest release.
 
-Release runs use a single concurrency group with `cancel-in-progress: false`. Older builds also check the current `main` head before publishing, so they cannot replace a newer commit. Repository rules that prohibit updating the `latest` tag must exempt this automation.
+Release runs use a single concurrency group with `cancel-in-progress: false`. Older builds compare their commit with the current `main` head before publishing. Later documentation-only changes are allowed; newer code/build inputs, divergent history or a potentially truncated API comparison (300 files) prevent publication. Renames check both paths. Published artifacts and `latest` still point to the exact built commit, not a later documentation commit. Keep the documentation exclusions in `scripts/publish-release.mjs` synchronized with both workflow filters. Repository rules that prohibit updating the `latest` tag must exempt this automation.
 
 ## Apple signing and notarization
 
@@ -56,7 +60,7 @@ Windows code signing is not configured. SmartScreen can warn on unsigned install
 
 1. Enable Actions and allow the actions referenced by these workflows, including MSYS2 and the Rust toolchain/cache actions.
 2. Allow workflow `GITHUB_TOKEN` write permissions for releases; the YAML limits this to the publication job. Organization policy may override repository settings.
-3. If using branch protection, make Quality a required check. Do not require signing or protection on mutable `latest` without an automation exception.
+3. If using branch protection, account for documentation-only PRs: a path-filtered workflow does not report a required check and can leave it pending. Do not unconditionally require this filtered Quality workflow for documentation-only PRs; use suitable repository rules or an always-reporting gate. Do not require signing or protection on mutable `latest` without an automation exception.
 4. Ensure private-repository Actions minutes/artifact storage are sufficient. Downloads remain private until the repository becomes public.
 5. Push the implementation to `main` when you intend to publish. Local development does not create remote releases.
 
