@@ -9,7 +9,7 @@
 
 GainMate measures perceived loudness, shows the adjustments your collection needs, and writes verified audio files. It runs locally with no account, subscription, telemetry or network connection required for audio processing.
 
-The interface uses neutral black and gray instrument panels, white text and yellow accents. Import your tracks, compare their loudness, choose a target, review the destination and normalize. Source files stay unchanged unless you explicitly choose replacement.
+Import your tracks, compare their loudness, choose a target, review the destination and normalize. Source files stay unchanged unless you explicitly choose replacement.
 
 ![GainMate audio library with real measured test audio](docs/screenshots/collection.png)
 
@@ -128,9 +128,7 @@ See [contributing](CONTRIBUTING.md), [audio internals](docs/AUDIO.md) and [relea
 
 ## CI, releases and signing
 
-PRs and `main` pushes run quality checks. A successful `main` release run builds both macOS architectures and a Windows NSIS installer, then stages a complete artifact set before promoting the normal release **Latest GainMate Release** at mutable tag `latest`. The app's semantic version remains independent of that tag. The publication job alone has write permission and uses `GITHUB_TOKEN`.
-
-Ad-hoc macOS builds require no secrets. Later, add `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` (app-specific) and `APPLE_TEAM_ID` for Developer ID signing and notarization. See [exact secret values and repository settings](docs/RELEASING.md). Windows signing remains separate.
+PRs and `main` pushes run quality checks. A successful `main` release run builds both macOS architectures and a Windows NSIS installer, then stages a complete artifact set before promoting the normal release **Latest GainMate Release** at mutable tag `latest`. The app's semantic version remains independent of that tag.
 
 ## License
 
