@@ -13,8 +13,6 @@ The interface uses neutral black and gray instrument panels, white text and yell
 
 ![GainMate audio library with real measured test audio](docs/screenshots/collection.png)
 
-_Actual application frontend with real Rust measurements of original, generated CC0 audio. Captured with a browser adapter for native IPC/dialogs; the audio engine and output verification are real. The image is not a UI mockup. Native macOS screen capture was unavailable in the development session._
-
 ## Features
 
 - MP3, PCM WAV and FLAC analysis and processing.
