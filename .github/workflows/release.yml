@@ -1,0 +1,146 @@
+name: Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+# Serialize entire runs, including publication; no competing updates to the rolling tag.
+concurrency:
+  group: gainmate-rolling-release
+  cancel-in-progress: false
+jobs:
+  quality:
+    uses: ./.github/workflows/ci.yml
+  build:
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            label: macos-arm64
+            bundles: dmg
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            label: macos-x64
+            bundles: dmg
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            label: windows-x64
+            bundles: nsis
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/cache@v5
+        with:
+          path: .audio-build
+          key: audio-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/build-audio.sh') }}
+      - name: Set up native Windows audio compiler
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel curl tar xz perl
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-zlib
+      - run: npm ci
+      - name: Build audio tools on macOS
+        if: runner.os == 'macOS'
+        run: bash scripts/build-audio.sh
+        env:
+          GAINMATE_TARGET: ${{ matrix.target }}
+      - name: Build static audio tools on Windows
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: bash scripts/build-audio.sh
+        env:
+          GAINMATE_TARGET: ${{ matrix.target }}
+      - name: Select bundled tools for tests
+        shell: bash
+        run: |
+          suffix=""
+          base="$PWD"
+          if [ "${{ runner.os }}" = Windows ]; then
+            suffix=".exe"
+            base="$(cygpath -m "$PWD")"
+          fi
+          {
+            echo "GAINMATE_FFMPEG=$base/src-tauri/binaries/ffmpeg-${{ matrix.target }}$suffix"
+            echo "GAINMATE_FFPROBE=$base/src-tauri/binaries/ffprobe-${{ matrix.target }}$suffix"
+          } >> "$GITHUB_ENV"
+      - run: cargo test -p gainmate-core --locked -- --test-threads=2
+      - name: Configure optional Apple signing and notarization
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          NOTARY_ID: ${{ secrets.APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          NOTARY_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$CERTIFICATE" ] && [ -n "$CERTIFICATE_PASSWORD" ] && [ -n "$IDENTITY" ]; then
+            {
+              echo "APPLE_CERTIFICATE=$CERTIFICATE"
+              echo "APPLE_CERTIFICATE_PASSWORD=$CERTIFICATE_PASSWORD"
+              echo "APPLE_SIGNING_IDENTITY=$IDENTITY"
+            } >> "$GITHUB_ENV"
+            if [ -n "$NOTARY_ID" ] && [ -n "$NOTARY_PASSWORD" ] && [ -n "$NOTARY_TEAM" ]; then
+              {
+                echo "APPLE_ID=$NOTARY_ID"
+                echo "APPLE_PASSWORD=$NOTARY_PASSWORD"
+                echo "APPLE_TEAM_ID=$NOTARY_TEAM"
+              } >> "$GITHUB_ENV"
+            fi
+          else
+            echo 'APPLE_SIGNING_IDENTITY=-' >> "$GITHUB_ENV"
+            echo 'No complete Apple signing configuration; building with ad-hoc signing.'
+          fi
+      - name: Build the real installer
+        run: npm run package -- --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - name: Collect installer, sources and license inventory
+        shell: bash
+        env:
+          GAINMATE_TARGET: ${{ matrix.target }}
+          GAINMATE_LABEL: ${{ matrix.label }}
+        run: node scripts/release-artifacts.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.label }}
+          path: release-artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+  publish:
+    needs: [quality, build]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: release-artifacts
+          merge-multiple: true
+      - name: Publish a complete, consistent rolling release
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { publish } = await import('${{ github.workspace }}/scripts/publish-release.mjs');
+            await publish({ github, context, core });

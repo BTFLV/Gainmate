@@ -1,0 +1,24 @@
+[package]
+name = "gainmate-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = "1"
+ebur128 = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+blake3 = "1"
+rusqlite = { version = "0.38", features = ["bundled"] }
+roxmltree = "0.21"
+url = "2"
+tempfile = "3"
+walkdir = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }
+
+[dev-dependencies]
+hound = "3.5"
