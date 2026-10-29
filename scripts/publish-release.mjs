@@ -50,7 +50,7 @@ export async function publish({
     if (files.filter((f) => f.endsWith(ending)).length !== 1)
       throw new Error(`Missing or duplicate release artifact: ${ending}`);
   const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
-  const stageTag = `gainmate-build-${context.runId}-${context.runAttempt}`;
+  const stageTag = `gainmate-build-${context.runId}-${process.env.GITHUB_RUN_ATTEMPT ?? 1}`;
   const body = `GainMate ${version} · commit ${sha}\n\nLocal, verified loudness normalization for MP3, WAV and FLAC.\n\nChoose macos-arm64.dmg for Apple Silicon (arm64) Macs with macOS 11 or newer, or windows-x64.exe for the Windows installer. The sources-and-notices archives accompany the bundled LGPL audio tools. SHA-256 checksum files are included.\n\nmacOS builds are ad-hoc signed unless Apple signing secrets are configured. They may require approval in System Settings → Privacy & Security. Windows installers are unsigned unless a future signing service is configured.\n\nThe latest tag is mutable; the application version is ${version}. All artifacts in this release come from the single commit above. See the README for usage, audio limitations and licensing.`;
   const staged = (
     await github.rest.repos.createRelease({
@@ -96,7 +96,14 @@ export async function publish({
       await github.rest.git
         .createRef({ ...repo, ref: `refs/tags/${archiveTag}`, sha: oldSha })
         .catch((e) => {
-          if (e.status !== 422) throw e;
+          // 422: the tag already exists. 403: the Actions token may not create a
+          // ref for a commit that changed workflow files; the draft keeps the old
+          // assets without a tag, which is enough to republish by hand.
+          if (e.status !== 422 && e.status !== 403) throw e;
+          if (e.status === 403)
+            core.warning(
+              `Could not tag ${archiveTag}; keeping the previous release as an untagged draft.`,
+            );
         });
       await github.rest.repos.updateRelease({
         ...repo,
@@ -137,10 +144,11 @@ export async function publish({
         ...repo,
         release_id: previous.id,
       });
-      await github.rest.git.deleteRef({
-        ...repo,
-        ref: `tags/gainmate-previous-${previous.id}`,
-      });
+      await github.rest.git
+        .deleteRef({ ...repo, ref: `tags/gainmate-previous-${previous.id}` })
+        .catch((e) => {
+          if (e.status !== 404 && e.status !== 422) throw e;
+        });
     }
     await github.rest.git
       .deleteRef({ ...repo, ref: `tags/${stageTag}` })
