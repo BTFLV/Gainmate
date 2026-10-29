@@ -15,10 +15,8 @@ function setup({
   dirs.push(folder);
   for (const ending of [
     'macos-arm64.dmg',
-    'macos-x64.dmg',
     'windows-x64.exe',
     'macos-arm64_sources-and-notices.tar.gz',
-    'macos-x64_sources-and-notices.tar.gz',
     'windows-x64_sources-and-notices.tar.gz',
   ])
     writeFileSync(join(folder, `GainMate_0.1.0_${ending}`), 'test');
@@ -77,7 +75,7 @@ describe('rolling release promotion', () => {
   it('uploads a full set before changing latest, then publishes a normal release', async () => {
     const s = setup();
     await publish(s);
-    expect(s.order.slice(0, 6)).toEqual(Array(6).fill(['upload']));
+    expect(s.order.slice(0, 4)).toEqual(Array(4).fill(['upload']));
     expect(s.github.rest.repos.updateRelease).toHaveBeenCalledWith(
       expect.objectContaining({
         release_id: 20,

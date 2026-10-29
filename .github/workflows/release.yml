@@ -25,10 +25,6 @@ jobs:
             target: aarch64-apple-darwin
             label: macos-arm64
             bundles: dmg
-          - runner: macos-15-intel
-            target: x86_64-apple-darwin
-            label: macos-x64
-            bundles: dmg
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
             label: windows-x64
@@ -85,7 +81,7 @@ jobs:
             echo "GAINMATE_FFMPEG=$base/src-tauri/binaries/ffmpeg-${{ matrix.target }}$suffix"
             echo "GAINMATE_FFPROBE=$base/src-tauri/binaries/ffprobe-${{ matrix.target }}$suffix"
           } >> "$GITHUB_ENV"
-      # Apple Silicon audio tests already passed in the required Quality job.
+      # Apple Silicon audio tests already passed in the required Quality job; only Windows repeats them.
       - if: matrix.target != 'aarch64-apple-darwin'
         run: cargo test -p gainmate-core --locked -- --test-threads=2
       - name: Configure optional Apple signing and notarization

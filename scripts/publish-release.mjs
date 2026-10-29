@@ -43,17 +43,15 @@ export async function publish({
     files = readdirSync(folder);
   for (const ending of [
     'macos-arm64.dmg',
-    'macos-x64.dmg',
     'windows-x64.exe',
     'macos-arm64_sources-and-notices.tar.gz',
-    'macos-x64_sources-and-notices.tar.gz',
     'windows-x64_sources-and-notices.tar.gz',
   ])
     if (files.filter((f) => f.endsWith(ending)).length !== 1)
       throw new Error(`Missing or duplicate release artifact: ${ending}`);
   const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
   const stageTag = `gainmate-build-${context.runId}-${context.runAttempt}`;
-  const body = `GainMate ${version} · commit ${sha}\n\nLocal, verified loudness normalization for MP3, WAV and FLAC.\n\nChoose macos-arm64.dmg for Apple Silicon, macos-x64.dmg for Intel, or windows-x64.exe for the Windows installer. The sources-and-notices archives accompany the bundled LGPL audio tools. SHA-256 checksum files are included.\n\nmacOS builds are ad-hoc signed unless Apple signing secrets are configured. They may require approval in System Settings → Privacy & Security. Windows installers are unsigned unless a future signing service is configured.\n\nThe latest tag is mutable; the application version is ${version}. All artifacts in this release come from the single commit above. See the README for usage, audio limitations and licensing.`;
+  const body = `GainMate ${version} · commit ${sha}\n\nLocal, verified loudness normalization for MP3, WAV and FLAC.\n\nChoose macos-arm64.dmg for Apple Silicon (arm64) Macs with macOS 11 or newer, or windows-x64.exe for the Windows installer. The sources-and-notices archives accompany the bundled LGPL audio tools. SHA-256 checksum files are included.\n\nmacOS builds are ad-hoc signed unless Apple signing secrets are configured. They may require approval in System Settings → Privacy & Security. Windows installers are unsigned unless a future signing service is configured.\n\nThe latest tag is mutable; the application version is ${version}. All artifacts in this release come from the single commit above. See the README for usage, audio limitations and licensing.`;
   const staged = (
     await github.rest.repos.createRelease({
       ...repo,

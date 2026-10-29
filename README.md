@@ -35,11 +35,10 @@ Import your tracks, compare their loudness, choose a target, review the destinat
 
 Installers appear after the first successful release workflow on `main`. No remote release is created merely by setting up or testing this repository. A private repository requires GitHub access to its downloads.
 
-| Platform                       | Artifact                             | Status                                              |
-| ------------------------------ | ------------------------------------ | --------------------------------------------------- |
-| macOS Apple Silicon, macOS 11+ | `GainMate_<version>_macos-arm64.dmg` | Native build validated locally                      |
-| macOS Intel, macOS 11+         | `GainMate_<version>_macos-x64.dmg`   | Build/test workflow configured; not run locally     |
-| Windows 10/11 x64              | `GainMate_<version>_windows-x64.exe` | NSIS installer workflow configured; not run locally |
+| Platform                         | Artifact                             | Status                                              |
+| -------------------------------- | ------------------------------------ | --------------------------------------------------- |
+| Apple Silicon (arm64), macOS 11+ | `GainMate_<version>_macos-arm64.dmg` | Native build validated locally                      |
+| Windows 10/11 x64                | `GainMate_<version>_windows-x64.exe` | NSIS installer workflow configured; not run locally |
 
 **macOS:** open the DMG and drag GainMate into Applications. Current builds are ad-hoc signed unless Apple Developer credentials have been configured. Gatekeeper may block downloaded builds; use **System Settings → Privacy & Security → Open Anyway** after reviewing the source and download. Managed-device policies may require a signed/notarized release. Do not disable Gatekeeper globally.
 

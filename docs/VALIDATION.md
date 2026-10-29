@@ -44,7 +44,7 @@ The package is ad-hoc signed, without Developer ID notarization. Its audio sidec
 
 ## Limits of the evidence
 
-- Windows x64 and Intel macOS builds/tests are configured in CI but were not executed locally. Their first successful CI run and native smoke checks remain necessary before claiming platform validation.
+- Windows x64 builds/tests are configured in CI but were not executed locally. macOS releases target Apple Silicon (arm64) only. Their first successful CI run and native smoke checks remain necessary before claiming platform validation.
 - GitHub publication was tested against an isolated mocked API, including upload failure, rollback and stale-build protection. No remote release was created as a test.
 - No Apple Developer credentials were available; Developer ID signing and notarization are prepared but untested.
 - The checks are not full EBU conformance certification or a broad subjective listening study. Aggressive loudness targets can audibly change dynamics. MP3 always incurs a lossy re-encode in this version.

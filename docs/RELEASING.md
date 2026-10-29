@@ -6,15 +6,14 @@
 
 `Release` runs on code/build-input pushes to `main` or manual dispatch. Both automatic triggers ignore `docs/**` and `**/*.md`; README, Markdown and documentation screenshots alone do not start builds. Source, application assets, dependencies, configuration, scripts and workflow changes still trigger builds. Manual dispatch remains available for an intentional rebuild.
 
-There is no separate Quality push trigger. Release calls Quality once, then builds the installers below. Apple Silicon audio tests already ran in Quality; only Intel and Windows repeat them for their native platform. The standalone frontend production build runs only on PRs, since release packaging builds it for each installer.
+There is no separate Quality push trigger. Release calls Quality once, then builds the installers below. Apple Silicon audio tests already ran in Quality; only Windows repeats them for its native platform. macOS builds target Apple Silicon (arm64) only; there is no Intel build. The standalone frontend production build runs only on PRs, since release packaging builds it for each installer.
 
 Platforms:
 
-| Runner           | Rust target              | Installer             |
-| ---------------- | ------------------------ | --------------------- |
-| `macos-15`       | `aarch64-apple-darwin`   | DMG for Apple Silicon |
-| `macos-15-intel` | `x86_64-apple-darwin`    | DMG for Intel         |
-| `windows-2025`   | `x86_64-pc-windows-msvc` | NSIS EXE installer    |
+| Runner         | Rust target              | Installer                     |
+| -------------- | ------------------------ | ----------------------------- |
+| `macos-15`     | `aarch64-apple-darwin`   | DMG for Apple Silicon (arm64) |
+| `windows-2025` | `x86_64-pc-windows-msvc` | NSIS EXE installer            |
 
 Windows audio tools are compiled with MinGW inside MSYS2 and statically link their non-system dependencies. The application is compiled with MSVC. These are separate processes, so the differing C runtime/toolchain is intentional.
 
@@ -24,7 +23,7 @@ Only the final publication job receives `contents: write`. It uses the automatic
 
 The normal, non-draft, non-prerelease release is named **Latest GainMate Release**, at the mutable tag **latest**, with `make_latest: true`. The app's semantic version comes from `src-tauri/tauri.conf.json`, `package.json` and workspace `Cargo.toml`; change all three together. The mutable tag is not an app version.
 
-All build jobs must succeed before publication. Each workflow run uploads uniquely named installer and matching source/license archives. Publication checks that all three installers and all three source archives exist. It uploads the whole artifact set into a new draft release before touching the public release. Then it temporarily archives the old release as a draft, moves `latest` to the built commit and publishes the complete new release. The old assets are deleted only after promotion succeeds. A handled promotion failure restores the previous release and tag.
+All build jobs must succeed before publication. Each workflow run uploads uniquely named installer and matching source/license archives. Publication checks that both installers and both source archives exist. It uploads the whole artifact set into a new draft release before touching the public release. Then it temporarily archives the old release as a draft, moves `latest` to the built commit and publishes the complete new release. The old assets are deleted only after promotion succeeds. A handled promotion failure restores the previous release and tag.
 
 GitHub has no transaction spanning release and Git-ref updates. There can be a short availability gap during promotion; there is no intentional state with a mixed old/new public artifact set. An abruptly terminated runner/API outage during promotion may require an administrator to republish the retained previous draft. Drafts named `gainmate-previous-*` retain the old assets until successful promotion. Do not delete recovery drafts before checking the normal latest release.
 
