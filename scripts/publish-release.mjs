@@ -121,12 +121,20 @@ export async function publish({
         force: true,
       });
     } catch (e) {
-      if (e.status !== 404 && e.status !== 422) throw e;
-      await github.rest.git.createRef({
-        ...repo,
-        ref: 'refs/tags/latest',
-        sha,
-      });
+      if (e.status === 403) {
+        // The Actions token is sometimes refused for tag changes. The assets are
+        // complete, so publish anyway; the tag catches up on the next run.
+        core.warning(
+          `Could not move tag latest to ${sha}; the assets are current, the tag lags behind.`,
+        );
+      } else {
+        if (e.status !== 404 && e.status !== 422) throw e;
+        await github.rest.git.createRef({
+          ...repo,
+          ref: 'refs/tags/latest',
+          sha,
+        });
+      }
     }
     await github.rest.repos.updateRelease({
       ...repo,
